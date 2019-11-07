@@ -1,0 +1,2 @@
+include ':sample', ':drag-layout'
+rootProject.name='DragLayout-View'
