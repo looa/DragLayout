@@ -2,6 +2,7 @@ package com.biubiu.widget.layout;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -15,6 +16,7 @@ import java.util.List;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
 
 /**
  * 一个可以拖拽的layout，RelativeLayout。
@@ -138,8 +140,10 @@ public class DragLayout extends RelativeLayout {
     private final static int DRAG_START = 1;
     private final static int DRAG_END = 2;
 
-
-    private List<MotionEvent> motionEventsCache = new ArrayList<>();
+    //如果在抬起的时候并没有触发drag事件，那么需要重新分发之前的操作给child。
+    //因此需要提前存储所有的MotionEvent事件。
+    //再由于多个MotionEvent所触发的事件和时间有关系（例如LongClick的判断），因此还需要存储每次Event的时间信息。
+    private List<Pair<Long, MotionEvent>> motionEventsCache = new ArrayList<>();
     private boolean isProcessingCache = false;
 
     @Override
@@ -150,7 +154,7 @@ public class DragLayout extends RelativeLayout {
             return false;
         }
         //记录 motionEvent cache
-        motionEventsCache.add(MotionEvent.obtain(event));
+        motionEventsCache.add(new Pair<>(System.currentTimeMillis(), MotionEvent.obtain(event)));
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
@@ -163,13 +167,8 @@ public class DragLayout extends RelativeLayout {
                 moveY = event.getRawY();
                 if (dragState == DRAG_END) {
                     //抬手的瞬间，如果发现并没有触发drag事件的话，则将cache住的所有event抛给下层处理
-                    isProcessingCache = true;
-                    for (MotionEvent motionEvent : motionEventsCache) {
-                        dispatchTouchEvent(motionEvent);
-                    }
-                    isProcessingCache = false;
-                    //清除cache信息
-                    motionEventsCache.clear();
+                    //分发cache event
+                    dispatchMotionEventCache();
                     return false;
                 }
                 motionEventsCache.clear();
@@ -177,6 +176,53 @@ public class DragLayout extends RelativeLayout {
 
         }
         return true;//如果没有触发拖动事件，就返回false，把event交给child处理
+    }
+
+    /*分发缓存的MotionEvents*/
+    private void dispatchMotionEventCache() {
+        if (motionEventsCache.size() > 0) {
+            //开始处理缓存的标记值
+            isProcessingCache = true;
+            //获取第一个缓存Event的时间，用于后续的postDelayed操作
+            Pair<Long, MotionEvent> head = motionEventsCache.get(0);
+            long headTime = head.first;
+            //获取触发长按所需要的时间
+            long longPressTimeout = ViewConfiguration.getLongPressTimeout();
+            longPressTimeout = longPressTimeout >= 500 ? longPressTimeout : 500;
+            //遍历分发缓存的MotionEvents
+            for (Pair<Long, MotionEvent> eventPair : motionEventsCache) {
+                long curTime = eventPair.first;
+                long dTime = curTime - headTime;
+                //大于长按触发时间的按照长按时间处理，避免过度延时导致的问题
+                dTime = dTime >= longPressTimeout ? longPressTimeout : dTime;
+                postDelayed(new DispatchMotionEvent(eventPair), dTime);
+            }
+        }
+    }
+
+    /*用于dispatch缓存的MotionEvents*/
+    private class DispatchMotionEvent implements Runnable {
+
+        private Pair<Long, MotionEvent> eventPair;
+
+        DispatchMotionEvent(Pair<Long, MotionEvent> eventPair) {
+            this.eventPair = eventPair;
+        }
+
+        @UiThread
+        @Override
+        public void run() {
+            if (eventPair != null && eventPair.second != null) {
+                //分发事件
+                dispatchTouchEvent(eventPair.second);
+                //清除对应的cache信息
+                motionEventsCache.remove(eventPair);
+                if (motionEventsCache.isEmpty()) {
+                    //结束处理缓存的标记值
+                    isProcessingCache = false;
+                }
+            }
+        }
     }
 
     @Override
