@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
         textView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(v.getContext(), "Click", Toast.LENGTH_SHORT).show();
+                Toast.makeText(v.getContext(), "Click" + System.currentTimeMillis(), Toast.LENGTH_SHORT).show();
             }
         });
         textView.setOnLongClickListener(new View.OnLongClickListener() {

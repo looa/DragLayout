@@ -31,10 +31,16 @@
             android:id="@+id/tv"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@color/colorPrimary"
+            android:background="@color/colorAccent"
             android:padding="16dp"
             android:text="Hello World!"
             android:textColor="#ffffff" />
+
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_below="@id/tv"
+            android:src="@mipmap/ic_launcher" />
     </com.biubiu.widget.layout.DragLayout>
 
 

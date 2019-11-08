@@ -160,6 +160,7 @@ public class DragLayout extends RelativeLayout {
             case MotionEvent.ACTION_DOWN:
                 downX = moveX = event.getRawX();
                 downY = moveY = event.getRawY();
+                postDelayed(new CheckLongClick(), ViewConfiguration.getLongPressTimeout());
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
@@ -221,6 +222,26 @@ public class DragLayout extends RelativeLayout {
                     //结束处理缓存的标记值
                     isProcessingCache = false;
                 }
+            }
+        }
+    }
+
+    //检测是否需要下发长按事件
+    //具体的检测方案就是检测到ActionDown之后
+    //postDelay一个CheckLongClick事件
+    //如果该事件发生时，控件依旧是DragEnd状态且cache不为空，则dispatch事件
+    private class CheckLongClick implements Runnable {
+
+        @Override
+        public void run() {
+            if (dragState == DRAG_END && motionEventsCache.size() > 0) {
+                //下发长按事件
+                isProcessingCache = true;
+                //第一个缓存一定是ACTION_DOWN
+                dispatchTouchEvent(motionEventsCache.get(0).second);
+                //已经dispatch的Event就在cache中移除掉
+                motionEventsCache.remove(0);
+                isProcessingCache = false;
             }
         }
     }
