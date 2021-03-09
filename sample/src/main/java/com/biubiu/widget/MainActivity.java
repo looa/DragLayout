@@ -1,23 +1,27 @@
 package com.biubiu.widget;
 
+import android.animation.ObjectAnimator;
 import android.os.Bundle;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.biubiu.widget.layout.DragLayout;
-
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.biubiu.widget.layout.DragLayout;
+
 public class MainActivity extends AppCompatActivity {
+
+    private DragLayout dragLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        DragLayout dragLayout = findViewById(R.id.dl);
-
+        dragLayout = findViewById(R.id.dl);
+        dragLayout.setDragLimited(DragLayout.DragLimited.WITHOUT_LIMITED);
         dragLayout.setOnDragListener(new DragLayout.OnDragListener() {
             @Override
             public void onDragStart(View view) {
@@ -27,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDragEnd(View view) {
                 Toast.makeText(view.getContext(), "End", Toast.LENGTH_SHORT).show();
+                moveToCenter(dragLayout);
             }
         });
 
@@ -44,7 +49,22 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onLongClick(View v) {
                 Toast.makeText(v.getContext(), "Long Click", Toast.LENGTH_SHORT).show();
+                dragLayout.setDragEnable(false);
                 return true;
+            }
+        });
+
+        textView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_OUTSIDE ||
+                        event.getAction() == MotionEvent.ACTION_CANCEL ||
+                        event.getAction() == MotionEvent.ACTION_UP) {
+                    Toast.makeText(v.getContext(), "drag enable", Toast.LENGTH_SHORT).show();
+                    dragLayout.setDragEnable(true);
+                    return false;
+                }
+                return false;
             }
         });
 
@@ -65,5 +85,24 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+    }
+
+    private void moveToCenter(View view) {
+        float x = view.getX();
+        float y = view.getY();
+
+        ObjectAnimator animatorX = ObjectAnimator.ofFloat(view,
+                "x",
+                x,
+                400);
+        animatorX.setDuration(160);
+        animatorX.start();
+
+        ObjectAnimator animatorY = ObjectAnimator.ofFloat(view,
+                "y",
+                y,
+                400);
+        animatorY.setDuration(160);
+        animatorY.start();
     }
 }
