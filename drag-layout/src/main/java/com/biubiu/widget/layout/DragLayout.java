@@ -264,6 +264,11 @@ public class DragLayout extends RelativeLayout {
         //  因此需要在平移和回调的时候判断状态信息
         switch (event.getAction()) {
             case MotionEvent.ACTION_MOVE:
+                // 如果不是第一个触屏点的事件，就不要进行后续的逻辑处理了，防止组件出现乱跳的情况
+                if (!isFirstPointer(event)) {
+                    return true;
+                }
+
                 float curX = event.getRawX();
                 float curY = event.getRawY();
 
@@ -302,6 +307,13 @@ public class DragLayout extends RelativeLayout {
                 break;
         }
         return true;
+    }
+
+    /*是否为第一个触屏点的事件*/
+    private boolean isFirstPointer(MotionEvent event) {
+        int actionIndex = event.getActionIndex();
+        int pointerId = event.getPointerId(actionIndex);
+        return pointerId == 0;
     }
 
     @Override
